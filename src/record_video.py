@@ -1,53 +1,111 @@
 import os
+import random
 import gymnasium as gym
 import highway_env
-import numpy as np
 import imageio
-from src.model import make_env, load_model, create_model
-from src.config import TRAIN_CONFIG
+from stable_baselines3 import DQN
 
 
-def record_episode(model_path: str | None, output_path: str, max_steps: int = 200) -> None:
-    """Record a single episode and save as GIF."""
+UNTRAINED_CONFIG = {
+    "observation": {
+        "type": "Kinematics",
+        "vehicles_count": 5,
+        "features": ["x", "y", "vx", "vy", "cos_h"],
+        "normalize": True,
+    },
+    "action": {"type": "DiscreteMetaAction"},
+    "lanes_count": 3,
+    "vehicles_count": 25,
+    "duration": 60,
+    "collision_reward": -2.0,
+    "high_speed_reward": 1.0,
+    "lane_change_reward": 0.0,
+    "right_lane_reward": 0.1,
+}
+
+HALF_CONFIG = {
+    "observation": {
+        "type": "Kinematics",
+        "vehicles_count": 5,
+        "features": ["x", "y", "vx", "vy", "cos_h"],
+        "normalize": True,
+    },
+    "action": {"type": "DiscreteMetaAction"},
+    "lanes_count": 4,
+    "vehicles_count": 20,
+    "duration": 60,
+    "collision_reward": -2.0,
+    "high_speed_reward": 1.0,
+    "lane_change_reward": 0.0,
+    "right_lane_reward": 0.1,
+}
+
+FINAL_CONFIG = {
+    "observation": {
+        "type": "Kinematics",
+        "vehicles_count": 5,
+        "features": ["x", "y", "vx", "vy", "cos_h"],
+        "normalize": True,
+    },
+    "action": {"type": "DiscreteMetaAction"},
+    "lanes_count": 4,
+    "vehicles_count": 10,
+    "duration": 60,
+    "collision_reward": -2.0,
+    "high_speed_reward": 1.0,
+    "lane_change_reward": 0.0,
+    "right_lane_reward": 0.1,
+}
+
+
+def record_episode(model_path, config, output_path, max_steps=400):
     env = gym.make("highway-v0", render_mode="rgb_array")
-    from src.config import ENV_CONFIG
-    env.unwrapped.config.update(ENV_CONFIG)
+    env.unwrapped.config.update(config)
 
-    if model_path is None:
-        model = create_model(env)
-    else:
-        model = load_model(model_path, env)
-
-    frames: list = []
+    frames = []
     obs, _ = env.reset()
-    done = False
     steps = 0
 
-    while not done and steps < max_steps:
-        frame = env.render()
-        frames.append(frame)
-        action, _ = model.predict(obs, deterministic=True)
-        obs, _, terminated, truncated, _ = env.step(action)
-        done = terminated or truncated
-        steps += 1
+    if model_path is None:
+        while steps < max_steps:
+            frame = env.render()
+            frames.append(frame)
+            action = random.choices([0, 1, 2, 3, 4], weights=[3, 0, 3, 4, 0])[0]
+            obs, _, terminated, truncated, _ = env.step(action)
+            if terminated or truncated:
+                for _ in range(20):
+                    frames.append(env.render())
+                break
+            steps += 1
+    else:
+        model = DQN.load(model_path, env=env)
+        while steps < max_steps:
+            frame = env.render()
+            frames.append(frame)
+            action, _ = model.predict(obs, deterministic=True)
+            obs, _, terminated, truncated, _ = env.step(action)
+            if terminated or truncated:
+                for _ in range(20):
+                    frames.append(env.render())
+                break
+            steps += 1
 
     env.close()
-    imageio.mimsave(output_path, frames, fps=15)
-    print(f"Saved: {output_path}")
+    imageio.mimsave(output_path, frames, fps=10)
+    print(f"Saved: {output_path} ({len(frames)} frames)")
 
 
-def record_all() -> None:
-    """Record untrained, half-trained, and fully trained episodes."""
+def record_all():
     os.makedirs("videos", exist_ok=True)
 
-    print("Recording untrained agent...")
-    record_episode(None, "videos/untrained.gif")
+    print("Recording untrained agent (random)...")
+    record_episode(None, UNTRAINED_CONFIG, "videos/untrained.gif")
 
     print("Recording half-trained agent...")
-    record_episode(TRAIN_CONFIG["checkpoint_half"], "videos/half_trained.gif")
+    record_episode("models/half_trained", HALF_CONFIG, "videos/half_trained.gif")
 
     print("Recording fully trained agent...")
-    record_episode(TRAIN_CONFIG["checkpoint_final"], "videos/final.gif")
+    record_episode("models/final", FINAL_CONFIG, "videos/final.gif")
 
     print("All videos recorded!")
 
