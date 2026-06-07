@@ -17,7 +17,7 @@
 
 **Highway-v0** is a highway driving simulation where the agent controls a vehicle surrounded by traffic. The goal is to drive as fast as possible while avoiding collisions.
 
-- **State space:** 5 × 5 matrix — positions and velocities of the 5 nearest vehicles `[x, y, vx, vy, cos_h]`, normalized
+- **State space:** 5 x 5 matrix — positions and velocities of the 5 nearest vehicles `[x, y, vx, vy, cos_h]`, normalized
 - **Action space:** 5 discrete meta-actions — `LANE_LEFT`, `IDLE`, `LANE_RIGHT`, `FASTER`, `SLOWER`
 
 ---
@@ -26,21 +26,29 @@
 
 The reward function balances speed and safety:
 
-$$r(s, a) = w_1 \cdot r_{\text{speed}} + w_2 \cdot r_{\text{collision}} + w_3 \cdot r_{\text{right\_lane}}$$
+```math
+r(s, a) = w_1 \cdot r_{\text{speed}} + w_2 \cdot r_{\text{collision}} + w_3 \cdot r_{\text{right\_lane}}
+```
 
 Where:
 
-$$r_{\text{speed}} = \frac{v - v_{\min}}{v_{\max} - v_{\min}}, \quad v \in [20, 30] \text{ m/s}$$
+```math
+r_{\text{speed}} = \frac{v - v_{\min}}{v_{\max} - v_{\min}}, \quad v \in [20, 30] \text{ m/s}
+```
 
-$$r_{\text{collision}} = \begin{cases} -2.0 & \text{if collision} \\ 0 & \text{otherwise} \end{cases}$$
+```math
+r_{\text{collision}} = \begin{cases} -2.0 & \text{if collision} \\ 0 & \text{otherwise} \end{cases}
+```
 
-$$r_{\text{right\_lane}} = 0.1 \times \text{(right lane bonus)}$$
+```math
+r_{\text{right\_lane}} = 0.1 \times \text{(right lane bonus)}
+```
 
 | Weight | Value | Purpose |
 |--------|-------|---------|
-| $w_1$ (high speed) | 1.0 | Encourage fast driving |
-| $w_2$ (collision) | −2.0 | Heavily penalize crashes |
-| $w_3$ (right lane) | 0.1 | Prefer right lane |
+| w1 (high speed) | 1.0 | Encourage fast driving |
+| w2 (collision) | -2.0 | Heavily penalize crashes |
+| w3 (right lane) | 0.1 | Prefer right lane |
 
 ---
 
@@ -53,7 +61,7 @@ $$r_{\text{right\_lane}} = 0.1 \times \text{(right lane bonus)}$$
 | Learning rate | 5e-4 | Stable convergence |
 | Batch size | 32 | Memory efficient |
 | Buffer size | 15,000 | Sufficient experience replay |
-| Gamma (γ) | 0.8 | Moderate future discounting |
+| Gamma (y) | 0.8 | Moderate future discounting |
 | Exploration fraction | 0.7 | Long exploration phase |
 | Final epsilon | 0.1 | Some randomness retained |
 | Target update interval | 50 | Stable target network |
@@ -79,9 +87,9 @@ The agent showed clear improvement across training stages. Mean reward nearly do
 
 | Challenge | Solution |
 |-----------|----------|
-| Observation shape mismatch (5×6 vs 5×5) | Reduced features from 6 to 5 in config |
+| Observation shape mismatch (5x6 vs 5x5) | Reduced features from 6 to 5 in config |
 | Slow training on CPU | Reduced buffer size and used DQN instead of PPO |
-| GIF recording without display | Used `rgb_array` render mode with imageio |
+| GIF recording without display | Used rgb_array render mode with imageio |
 
 ---
 
